@@ -142,10 +142,17 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:3000
    | `*_QA_REPORT[_v*].md` (Pass) | **Commit changes**, then move to `archive/reports/` |
    | `*_QA_REPORT[_v*].md` (Fail) | Extract version, create `BUG_FIX_REQUEST_v[n+1]`, spawn Developer |
    | `*_E2E_REPORT.md` (Pass) | Move to `archive/reports/` |
-   | `*_E2E_REPORT.md` (Partial/Fail) | Move to `archive/reports/`, process BUG_FIX_REQUESTs in inbox (CODE_BUGs first, TEST_FIXes second) |
+   | `*_E2E_REPORT.md` (Partial/Fail) | Move to `archive/reports/`, process BUG_FIX_REQUESTs in inbox |
    | `*_E2E_REPORT.md` (Blocked) | Move to `stasis/` |
+
    | `*_SPEC_UPDATE.md` | Move to `archive/reports/` |
    | `*_BUG_REPORT.md` | Create `*_BUG_FIX_REQUEST_v1.md`, spawn Developer |
+
+   **⚠️ E2E Multi-Bug Priority:**
+   When Regression creates multiple requests in inbox:
+   1. **CODE_BUGs first** - Fix broken app code before fixing tests
+   2. **TEST_FIXes second** - Only after code is stable
+   3. Process one at a time, sequentially
 
    **Version Logic for QA_REPORT Failures:**
    - `QA_REPORT.md` (no version) → Create `BUG_FIX_REQUEST_v1.md`
@@ -209,10 +216,12 @@ Each subagent:
    git diff --name-only HEAD
    ```
 
-3. **Filter to code files only** (keep):
-   - `src/**`, `lib/**`, `app/**`, `components/**`
-   - Test files if modified
-   - Exclude: agent files, config files (unless intentional)
+3. **Filter out non-code files** (keep only):
+   - Source code: `src/**`, `lib/**`, `app/**`, `components/**`, `server/**`
+   - Tests: `e2e/**`, `tests/**`, `__tests__/**`, `*.spec.ts`, `*.test.ts`
+   - Docs: `CHANGELOG.md`, `docs/**` (if intentionally updated)
+   - Exclude: agent workspace files (`inbox/`, `processing/`, `reports/`, `stasis/`, `archive/`)
+   - Exclude: config unless intentional (`*.json` except package.json/tsconfig.json)
 
 ### Steps
 

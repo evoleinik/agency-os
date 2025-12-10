@@ -113,6 +113,7 @@ while inbox/ or processing/ or reports/ has files:
 | **`archive/reports/`** | Completed output files (reports). | **Write:** Supervisor after routing. |
 | **`stasis/`** | Human intervention needed (v3+ failures). | **Write:** Supervisor. **Read:** Human. |
 | **`prompts/`** | System prompts for roles. | **Read Only.** |
+| **`shared/`** | Shared protocols referenced by all agents. | **Read Only.** |
 
 ### Archive Strategy
 
@@ -285,19 +286,19 @@ Human ──./dispatch e2e──▶ E2E_RUN_REQUEST (inbox/)
 
 **Format:** `YYYYMMDD_HHMMSS_TYPE[_v[n]].md` (timestamp first for chronological sorting)
 
-| File Suffix | Created By | Picked Up By | Location |
-|:---|:---|:---|:---|
-| `_MAP_REQUEST` | Human | Cartographer | `inbox/` |
-| `_DEV_TASK` | Human | Developer | `inbox/` |
-| `_BUG_FIX_REQUEST_v[n]` | Supervisor/Regression | Developer | `inbox/` |
-| `_TEST_FIX_REQUEST_v[n]` | Regression | Developer | `inbox/` |
-| `_READY_FOR_QA[_v[n]]` | Developer | Supervisor | `inbox/` |
-| `_QA_REQUEST[_v[n]]` | Supervisor | Tester | `inbox/` |
-| `_QA_REPORT[_v[n]]` | Tester | Supervisor | `reports/` |
-| `_E2E_RUN_REQUEST` | Human | Regression | `inbox/` |
-| `_E2E_REPORT` | Regression | Supervisor | `reports/` |
-| `_SPEC_UPDATE` | Cartographer | Supervisor | `reports/` |
-| `_BUG_REPORT` | Cartographer | Supervisor | `reports/` |
+| File Suffix | Created By | Picked Up By | Location | Content |
+|:---|:---|:---|:---|:---|
+| `_MAP_REQUEST` | Human | Cartographer | `inbox/` | Target URL, SCOPE field |
+| `_DEV_TASK` | Human | Developer | `inbox/` | Feature requirements |
+| `_BUG_FIX_REQUEST_v[n]` | Supervisor/Regression | Developer | `inbox/` | Bug to fix (with retry count) |
+| `_TEST_FIX_REQUEST_v[n]` | Regression | Developer | `inbox/` | Test that needs complex fix |
+| `_READY_FOR_QA[_v[n]]` | Developer | Supervisor | `inbox/` | Files modified, what to verify |
+| `_QA_REQUEST[_v[n]]` | Supervisor | Tester | `inbox/` | Changes to verify (copy from READY_FOR_QA) |
+| `_QA_REPORT[_v[n]]` | Tester | Supervisor | `reports/` | Pass/Fail with evidence table |
+| `_E2E_RUN_REQUEST` | Human | Regression | `inbox/` | Test scope (all or specific) |
+| `_E2E_REPORT` | Regression | Supervisor | `reports/` | Test results, self-healed/routed bugs |
+| `_SPEC_UPDATE` | Cartographer | Supervisor | `reports/` | What documentation was updated |
+| `_BUG_REPORT` | Cartographer | Supervisor | `reports/` | Bugs found during mapping |
 
 **Version Propagation (CRITICAL for infinite loop prevention):**
 
@@ -306,6 +307,17 @@ BUG_FIX_REQUEST_v1 → READY_FOR_QA_v1 → QA_REQUEST_v1 → QA_REPORT_v1 (Fail)
   (20251205_100000)   (20251205_100500)  (20251205_100501)  (20251205_101000)   (20251205_101001)
                                                                          (Pass) → archive/
 ```
+
+**Example Flow:**
+
+| Step | Agent | Input | Output | Notes |
+|------|-------|-------|--------|-------|
+| 1 | Developer | `100000_BUG_FIX_REQUEST_v1.md` | `100500_READY_FOR_QA_v1.md` | Preserves `_v1` |
+| 2 | Supervisor | `100500_READY_FOR_QA_v1.md` | `100501_QA_REQUEST_v1.md` | Creates NEW file with same version |
+| 3 | Tester | `100501_QA_REQUEST_v1.md` | `101000_QA_REPORT_v1.md` | Preserves `_v1` |
+| 4 | Supervisor | `101000_QA_REPORT_v1.md` (fail) | `101001_BUG_FIX_REQUEST_v2.md` | Increments to `_v2` |
+| 5 | Developer | `101001_BUG_FIX_REQUEST_v2.md` | `101500_READY_FOR_QA_v2.md` | Preserves `_v2` |
+| 6 | Tester | (via Supervisor) | `102000_QA_REPORT_v2.md` (pass) | → archive/ |
 
 **Version Format:** `v1`, `v2`, `v3` suffix for retry tracking. v3+ fails go to `stasis/`.
 
@@ -357,9 +369,39 @@ BUG_FIX_REQUEST_v1 → READY_FOR_QA_v1 → QA_REQUEST_v1 → QA_REPORT_v1 (Fail)
 - **Resolution:** Human reviews and decides next steps.
 
 ### Regression Detection
-**Trigger:** QA_REPORT_v2 fails with same bug as v1.
+**Trigger:** QA_REPORT_v2+ fails with same bug as previous version.
 **Action:** Immediately escalate to stasis (don't create next version).
 **Rationale:** If fix A breaks, fix B re-breaks with same issue, the problem is deeper than code.
+
+**How to detect:**
+1. When creating BUG_FIX_REQUEST_v2+, Supervisor reads the previous QA_REPORT
+2. Compare current failure's error/bug description to previous version's
+3. If bug signature matches → REGRESSION detected → stasis immediately
+
+### Timeout Handling (E2E)
+
+| Scenario | Classification | Action |
+|----------|---------------|--------|
+| >2 tests timeout | BLOCKED | Move to stasis (infrastructure issue) |
+| 1-2 tests timeout | TEST_BUG | Increase timeout, re-run |
+| Still times out after fix | CODE_BUG | Performance regression |
+
+### Hallucination Prevention
+- Each agent prompt includes **STRICT OUTPUT FORMATS** section
+- Lists valid file prefixes and common mistakes to avoid
+- Agents must use EXACT naming conventions
+
+### Dev Environment Management
+- **Check:** Server health before browser-dependent agents
+- **If not running:** Start dev server, wait for readiness
+- **If fails:** Escalate to stasis
+- **Who needs it:** Tester, Cartographer, Regression (not Developer)
+- **See:** `shared/pre-flight.md` for full protocol
+
+### Browser Lifecycle
+- **Persist:** Browser stays open between tests (don't close)
+- **Reuse:** Agents inherit logged-in state from previous session
+- **Auth:** Use persistent auth files (see `shared/auth-patterns.md`)
 
 ### Stasis Protocol (Auto-Pause)
 

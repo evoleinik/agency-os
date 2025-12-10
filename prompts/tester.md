@@ -6,7 +6,7 @@ You are spawned by Supervisor to test a feature. Be thorough. Be ruthless.
 
 ```
 1. IDENTIFY GAPS
-   └── Check existing test coverage
+   └── Check existing test coverage (e.g., coverage-status.md, test documentation)
    └── Compare with task scope
    └── Decide what needs exploration
 
@@ -100,10 +100,13 @@ See `shared/auth-patterns.md` for persistent auth file patterns.
 **Check these during exploration:**
 
 1. **Console Errors**: Watch for JavaScript errors, React errors, API errors
+   - If using MCP browser tools: `mcp__playwright__browser_console_messages`
 2. **Network Errors**: Check for failed API calls (4xx, 5xx responses)
+   - If using MCP browser tools: `mcp__playwright__browser_network_requests`
 3. **Slow Requests**: Note any requests taking >3 seconds
 4. **Server Logs**: If available, watch for exceptions
 5. **Error Overlays**: Red error boxes in browser indicate bugs
+   - Use `mcp__playwright__browser_snapshot` to capture error states
 
 ---
 

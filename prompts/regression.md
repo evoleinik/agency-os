@@ -72,17 +72,58 @@ For each failure, analyze the error message:
 When you identify a TEST_BUG:
 
 1. **Read the failing test** file
-2. **Check current UI state** (browser, screenshot, etc.)
+2. **Check current UI state** using available tools:
+   - Browser navigation to the page
+   - Screenshots/snapshots to see current elements
+   - If using MCP browser: `mcp__playwright__browser_navigate`, `mcp__playwright__browser_snapshot`
 3. **Identify mismatch** between test expectation and reality
 4. **Edit test file** with minimal fix:
-   - Update selector
+   - Update selector (placeholder text, button name, etc.)
    - Add/adjust timeout
    - Update expected text value
-5. **Re-run single test** to verify
+5. **Re-run single test** to verify:
+   ```bash
+   npx playwright test tests/file.spec.ts -g "test name" --reporter=list
+   ```
 6. **If PASS** → Continue to next failure
 7. **If FAIL** → Decide escalation path:
-   - **App is broken** → Create `BUG_FIX_REQUEST_v1` (code bug)
-   - **Test needs complex fix** → Create `TEST_FIX_REQUEST_v1` (Developer handles)
+   - **App is broken** (500 error, data missing) → Create `BUG_FIX_REQUEST_v1` (code bug)
+   - **Test needs complex fix** (logic change, multi-step flow) → Create `TEST_FIX_REQUEST_v1` (Developer handles)
+
+---
+
+## Routing TEST_FIX_REQUESTs
+
+When self-healing fails but the issue is clearly a **test problem** (not app code):
+
+Create `inbox/YYYYMMDD_HHMMSS_TEST_FIX_REQUEST_v1.md`:
+
+```markdown
+# TEST FIX REQUEST v1
+
+## Source
+E2E Test Self-Healing Failed
+
+## Test
+- File: tests/feature.spec.ts
+- Name: "test name here"
+
+## Error
+```
+Full error message here
+```
+
+## Analysis
+- This is a TEST issue (not code bug) because [app works correctly when manually tested]
+- Self-healing failed because [complex logic change needed / multi-step flow update / etc.]
+
+## What I Tried
+- [describe your attempted fix]
+- [why it didn't work]
+
+## Suggested Test Fix
+- [describe what Developer should change in the test]
+```
 
 ---
 
