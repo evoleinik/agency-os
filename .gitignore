@@ -1,0 +1,40 @@
+# Agency OS - Git Ignore
+
+# Task files in working directories (keep structure, ignore contents)
+inbox/*.md
+processing/*.md
+reports/*.md
+stasis/*.md
+
+# Keep directory structure with .gitkeep files
+!inbox/.gitkeep
+!processing/.gitkeep
+!reports/.gitkeep
+!stasis/.gitkeep
+!archive/inputs/.gitkeep
+!archive/reports/.gitkeep
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Pause marker (don't commit pause state)
+PAUSED
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Auth files (may contain credentials)
+auth-*.json
+
+# Logs
+*.log

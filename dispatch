@@ -1,0 +1,110 @@
+#!/bin/bash
+#
+# Agency OS - Task Dispatcher
+# Creates task files in inbox/ for the Supervisor to process
+#
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+TYPE=$1
+MESSAGE=$2
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+if [ -z "$MESSAGE" ]; then
+  echo "Agency OS - Task Dispatcher"
+  echo ""
+  echo "Usage: ./dispatch [type] 'message'"
+  echo ""
+  echo "Task Types:"
+  echo "  map  → Cartographer documents a feature"
+  echo "  qa   → Tester validates against specs"
+  echo "  dev  → Developer implements/fixes something"
+  echo "  e2e  → Run E2E tests, triage failures, fix"
+  echo ""
+  echo "Examples:"
+  echo "  ./dispatch map 'Document the user dashboard'"
+  echo "  ./dispatch qa 'Verify login flow works'"
+  echo "  ./dispatch dev 'Add export button to reports'"
+  echo "  ./dispatch e2e 'Run full regression suite'"
+  exit 1
+fi
+
+case "$TYPE" in
+  map)
+    FILE="${TIMESTAMP}_MAP_REQUEST.md"
+    cat > "${SCRIPT_DIR}/inbox/${FILE}" << EOF
+# MAP REQUEST
+TARGET: http://localhost:3000
+SCOPE: FEATURE
+GOAL: $MESSAGE
+
+## Context
+Document the specified feature area.
+
+## Focus Areas
+- UI components and interactions
+- Data flow and state management
+- Edge cases and error states
+EOF
+    ;;
+  qa)
+    FILE="${TIMESTAMP}_QA_REQUEST.md"
+    cat > "${SCRIPT_DIR}/inbox/${FILE}" << EOF
+# QA REQUEST
+TARGET: http://localhost:3000
+MODE: EXPLORE
+GOAL: $MESSAGE
+
+## Task
+Test the specified functionality thoroughly.
+
+## Expected Behavior
+Refer to docs/specs/ for requirements.
+EOF
+    ;;
+  dev)
+    FILE="${TIMESTAMP}_DEV_TASK.md"
+    cat > "${SCRIPT_DIR}/inbox/${FILE}" << EOF
+# DEV TASK
+GOAL: $MESSAGE
+
+## Objective
+Implement the requested feature or fix.
+
+## Requirements
+- Follow existing code patterns
+- Run build and lint before completion
+- Update CHANGELOG.md
+
+## Acceptance Criteria
+- Feature works as specified
+- No regressions introduced
+- Code passes all checks
+EOF
+    ;;
+  e2e)
+    FILE="${TIMESTAMP}_E2E_RUN_REQUEST.md"
+    cat > "${SCRIPT_DIR}/inbox/${FILE}" << EOF
+# E2E RUN REQUEST
+SCOPE: $MESSAGE
+TESTS: e2e/*.spec.ts
+
+## Context
+Run end-to-end tests and handle any failures.
+
+## Instructions
+- Run the specified test scope
+- Triage failures (TEST_BUG vs CODE_BUG)
+- Self-heal simple test issues
+- Route code bugs to Developer
+EOF
+    ;;
+  *)
+    echo "Unknown type: $TYPE"
+    echo ""
+    echo "Valid types: map, qa, dev, e2e"
+    echo "Run './dispatch' without arguments for help."
+    exit 1
+    ;;
+esac
+
+echo "✓ Dispatched: inbox/${FILE}"

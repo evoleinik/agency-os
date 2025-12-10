@@ -1,0 +1,24 @@
+#!/bin/bash
+#
+# Agency OS - Supervisor Launcher
+# Starts Claude as the Supervisor agent
+#
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR" || exit 1
+
+# Check if claude CLI is available
+if ! command -v claude &> /dev/null; then
+    echo "Error: 'claude' CLI not found."
+    echo "Install Claude Code: https://claude.ai/code"
+    exit 1
+fi
+
+echo "Starting Agency OS Supervisor..."
+echo "Working directory: $SCRIPT_DIR"
+echo ""
+
+claude \
+  --append-system-prompt "$(<prompts/supervisor.md)" \
+  --dangerously-skip-permissions \
+  "${1:-You are the Supervisor. Read CLAUDE.md for system overview, then begin your main loop.}"
