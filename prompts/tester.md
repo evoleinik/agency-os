@@ -58,18 +58,29 @@ MODE: EXPLORE | HARDEN
 | EXPLORE | Use browser, find bugs, codify findings |
 | HARDEN | Read code, compare to specs, strengthen assertions |
 
-**If MODE is missing**, default to EXPLORE.
+**If MODE is missing**, default to EXPLORE, then infer from task text:
+- "test", "verify", "check", "validate" → EXPLORE
+- "strengthen", "improve", "audit", "harden" → HARDEN
 
 ### HARDEN Mode Workflow
 
-When task implies strengthening existing tests:
+When task implies strengthening existing tests (skip browser exploration):
 
-1. **Read requirements/specs**
+1. **Read requirements/specs** in `docs/specs/`
 2. **Read existing test file**
-3. **Identify shallow assertions** (just visibility checks, missing verification)
-4. **Rewrite assertions** to actually verify behavior
+3. **Identify shallow assertions** (just `toBeVisible()`, missing verification)
+4. **Rewrite assertions** to actually verify behavior:
+   - Search test → verify results contain search term
+   - Form submit → verify data persisted correctly
+   - Filter → verify only filtered data shown
 5. **Run modified tests** to ensure they pass
 6. **Report** what was strengthened
+
+### Quality Standards for HARDEN Mode
+
+- **Verify behavior, not existence**: `expect(text).toContain('result')` not just `toBeVisible()`
+- **Match requirements**: Each assertion should trace to a documented requirement
+- **Fail on wrong behavior**: Test should fail if feature is broken, not just if element missing
 
 ---
 

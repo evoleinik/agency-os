@@ -36,6 +36,65 @@ After ALL tasks are created, proceed to Main Loop to execute sequentially.
 
 ---
 
+## Handling Conversational Requests
+
+When human speaks directly, analyze the request and identify ALL tasks needed:
+
+| Request Pattern | Task Type | Agent |
+|-----------------|-----------|-------|
+| "run tests", "check X", "verify Y" | QA_REQUEST | Tester (EXPLORE mode) |
+| "strengthen tests", "improve tests", "audit tests", "harden" | QA_REQUEST | Tester (HARDEN mode) |
+| "run E2E", "regression", "full suite" | E2E_RUN_REQUEST | Regression |
+| "fix X", "add Y", "implement Z" | DEV_TASK | Developer |
+| "document X", "map Y" | MAP_REQUEST | Cartographer |
+
+**Multi-step requests:** If the request implies multiple steps (e.g., "fix X and verify it works"), create ALL tasks upfront:
+```
+inbox/
+├── YYYYMMDD_100000_DEV_TASK.md      # Fix X
+├── YYYYMMDD_100001_QA_REQUEST.md    # Verify fix
+```
+
+**CRITICAL:** Never do the work yourself. Always create file(s) → then spawn agents sequentially.
+
+---
+
+## Task Decomposition (Before Spawning)
+
+**Evaluate every task before spawning an agent. Large tasks should be split.**
+
+### Size Guidelines
+| Agent | Comfortable Scope |
+|-------|------------------|
+| Tester | 1-2 pages max, 5-10 verifications |
+| Developer | 1-3 files, single objective |
+| Cartographer | 1 feature area |
+
+### Decomposition Rules
+1. Read the task and count distinct pages/routes/features
+2. If QA task mentions > 2 pages → DECOMPOSE into focused sub-tasks
+3. If DEV task affects > 3 files → DECOMPOSE into incremental changes
+4. Create sequential task files, process one at a time
+
+### Example: Decomposing a QA Task
+```
+Input: "Test the user management system"
+
+Decompose into 3 focused tasks:
+1. YYYYMMDD_HHMMSS_QA_REQUEST.md → "Test /users list page"
+2. YYYYMMDD_HHMMSS_QA_REQUEST.md → "Test /users/[id] detail page"
+3. YYYYMMDD_HHMMSS_QA_REQUEST.md → "Test user settings operations"
+
+Process sequentially. Each must PASS before proceeding.
+```
+
+### When NOT to Decompose
+- Task is already focused on 1-2 pages
+- Task explicitly says "quick check" or similar
+- Cartographer mapping a single feature
+
+---
+
 ## Main Loop
 
 0. **Check for PAUSED state**
@@ -63,7 +122,7 @@ After ALL tasks are created, proceed to Main Loop to execute sequentially.
    | `*_QA_REPORT[_v*].md` (Pass) | **Commit changes**, then move to `archive/reports/` |
    | `*_QA_REPORT[_v*].md` (Fail) | Extract version, create `BUG_FIX_REQUEST_v[n+1]`, spawn Developer |
    | `*_E2E_REPORT.md` (Pass) | Move to `archive/reports/` |
-   | `*_E2E_REPORT.md` (Partial/Fail) | Move to `archive/reports/`, process BUG_FIX_REQUESTs in inbox |
+   | `*_E2E_REPORT.md` (Partial/Fail) | Move to `archive/reports/`, process BUG_FIX_REQUESTs in inbox (CODE_BUGs first, TEST_FIXes second) |
    | `*_E2E_REPORT.md` (Blocked) | Move to `stasis/` |
    | `*_SPEC_UPDATE.md` | Move to `archive/reports/` |
    | `*_BUG_REPORT.md` | Create `*_BUG_FIX_REQUEST_v1.md`, spawn Developer |
