@@ -1,0 +1,74 @@
+#!/bin/bash
+#
+# Agency OS - Task Dispatcher (Optional Helper)
+#
+# You can also just talk to the Supervisor directly - this script
+# is a convenience for quickly creating task files from the command line.
+#
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+TYPE=$1
+MESSAGE=$2
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+if [ -z "$MESSAGE" ]; then
+  echo "Agency OS - Task Dispatcher"
+  echo ""
+  echo "Usage: ./dispatch [type] 'message'"
+  echo ""
+  echo "Task Types:"
+  echo "  map  → Cartographer documents a feature"
+  echo "  qa   → Tester validates functionality"
+  echo "  dev  → Developer implements/fixes something"
+  echo "  e2e  → Regression runs E2E tests"
+  echo ""
+  echo "Examples:"
+  echo "  ./dispatch dev 'Add user profile page'"
+  echo "  ./dispatch qa 'Verify login flow works'"
+  echo "  ./dispatch e2e 'Run full regression suite'"
+  echo "  ./dispatch map 'Document the dashboard'"
+  echo ""
+  echo "Alternative: Just talk to the Supervisor directly."
+  exit 1
+fi
+
+case "$TYPE" in
+  map)
+    FILE="${TIMESTAMP}_MAP_REQUEST.md"
+    cat > "${SCRIPT_DIR}/inbox/${FILE}" << EOF
+# MAP REQUEST
+TARGET: http://localhost:3000
+SCOPE: FEATURE
+GOAL: $MESSAGE
+EOF
+    ;;
+  qa)
+    FILE="${TIMESTAMP}_QA_REQUEST.md"
+    cat > "${SCRIPT_DIR}/inbox/${FILE}" << EOF
+# QA REQUEST
+MODE: EXPLORE
+GOAL: $MESSAGE
+EOF
+    ;;
+  dev)
+    FILE="${TIMESTAMP}_DEV_TASK.md"
+    cat > "${SCRIPT_DIR}/inbox/${FILE}" << EOF
+# DEV TASK
+GOAL: $MESSAGE
+EOF
+    ;;
+  e2e)
+    FILE="${TIMESTAMP}_E2E_RUN_REQUEST.md"
+    cat > "${SCRIPT_DIR}/inbox/${FILE}" << EOF
+# E2E RUN REQUEST
+SCOPE: $MESSAGE
+EOF
+    ;;
+  *)
+    echo "Unknown type: $TYPE"
+    echo "Valid types: map, qa, dev, e2e"
+    exit 1
+    ;;
+esac
+
+echo "✓ Created: inbox/${FILE}"

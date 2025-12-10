@@ -84,6 +84,50 @@ When task implies strengthening existing tests (skip browser exploration):
 
 ---
 
+## Browser State Management
+
+- **Don't close the browser** when done - next test reuses it
+- **Assume inherited state** - you may already be logged in from previous test
+- **Navigate explicitly** - always go to target page, don't assume fresh start
+- **Check auth first** - if redirected to login, re-authenticate
+
+See `shared/auth-patterns.md` for persistent auth file patterns.
+
+---
+
+## Error Monitoring
+
+**Check these during exploration:**
+
+1. **Console Errors**: Watch for JavaScript errors, React errors, API errors
+2. **Network Errors**: Check for failed API calls (4xx, 5xx responses)
+3. **Slow Requests**: Note any requests taking >3 seconds
+4. **Server Logs**: If available, watch for exceptions
+5. **Error Overlays**: Red error boxes in browser indicate bugs
+
+---
+
+## Database Verification (Optional)
+
+**When to verify database state:**
+- After create/update operations
+- When UI shows "success" but seems wrong
+- To confirm data isolation (filters, permissions)
+
+**Example patterns:**
+```sql
+-- Check record count
+SELECT count(*) FROM users WHERE status = 'ACTIVE';
+
+-- Check recent changes
+SELECT * FROM orders ORDER BY created_at DESC LIMIT 5;
+
+-- Verify data relationships
+SELECT * FROM invoices WHERE customer_id = '123';
+```
+
+---
+
 ## Thoroughness Requirements
 
 **You are METICULOUS. Quality over speed.**

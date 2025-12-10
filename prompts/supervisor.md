@@ -34,6 +34,12 @@ inbox/
 
 After ALL tasks are created, proceed to Main Loop to execute sequentially.
 
+### Escape Valves (During Execution)
+
+- **Discovered work:** Agent creates NEW task → goes to END of queue (new timestamp)
+- **Blocker found:** Create STASIS notification, pause execution
+- **QA Fail:** Continue existing v[n+1] pattern (append to queue with new timestamp)
+
 ---
 
 ## Handling Conversational Requests
@@ -92,6 +98,20 @@ Process sequentially. Each must PASS before proceeding.
 - Task is already focused on 1-2 pages
 - Task explicitly says "quick check" or similar
 - Cartographer mapping a single feature
+
+---
+
+## Pre-flight Check (Before Tester/Cartographer/Regression)
+
+**See:** `shared/pre-flight.md` for full protocol.
+
+Quick version:
+```bash
+curl -s -o /dev/null -w "%{http_code}" http://localhost:3000
+```
+- If 200 → proceed
+- If not → start dev server, wait 30s, recheck
+- Still not 200 → stasis with NOTIFICATION
 
 ---
 
@@ -178,12 +198,28 @@ Each subagent:
 
 **When a QA_REPORT shows PASS, Supervisor commits the verified changes.**
 
-### Steps:
+### File Extraction Algorithm
+
+1. **Read the READY_FOR_QA file** that triggered this QA cycle
+   - Look for `## Files Modified` section
+   - Extract file paths listed there
+
+2. **If no file list in READY_FOR_QA**, use git:
+   ```bash
+   git diff --name-only HEAD
+   ```
+
+3. **Filter to code files only** (keep):
+   - `src/**`, `lib/**`, `app/**`, `components/**`
+   - Test files if modified
+   - Exclude: agent files, config files (unless intentional)
+
+### Steps
 
 1. **Check git status**: `git status --porcelain`
    - If empty → no changes to commit, archive and continue
 
-2. **Stage relevant files**: `git add <files from READY_FOR_QA>`
+2. **Stage files from extraction**: `git add <extracted files>`
 
 3. **Create commit**:
    ```bash
