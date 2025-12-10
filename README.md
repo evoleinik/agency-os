@@ -19,18 +19,26 @@ Traditional coordination mechanisms (Redis, RabbitMQ, databases) solve distribut
 
 ```bash
 # Clone the repo
-git clone https://github.com/YOUR_USERNAME/agency-os.git
+git clone https://github.com/evoleinik/agency-os.git
 cd agency-os
-
-# Make scripts executable
-chmod +x dispatch supervisor
-
-# Dispatch your first task
-./dispatch dev "Add a hello world endpoint"
 
 # Start the supervisor (requires Claude CLI)
 ./supervisor
+
+# Or just talk to Claude directly:
+# "Read CLAUDE.md and prompts/supervisor.md, then begin your supervisor loop"
 ```
+
+That's it. Just talk to the Supervisor in natural language:
+
+```
+You: "Add a user profile page with avatar upload"
+You: "Test the login flow"
+You: "Run the E2E tests and fix any failures"
+You: "Document the dashboard features"
+```
+
+The Supervisor decomposes your request into tasks, creates the appropriate files in `inbox/`, and spawns specialized agents to execute them.
 
 ## Architecture
 
@@ -39,15 +47,16 @@ chmod +x dispatch supervisor
                               │  Human  │
                               └────┬────┘
                                    │
-                   ./dispatch OR conversational request
+                        conversational request
                                    │
                                    ▼
                         ┌─────────────────────┐
-                        │   PLANNING PHASE    │
-                        │ (decompose → tasks) │
+                        │     SUPERVISOR      │
+                        │ (decomposes request │
+                        │  into task files)   │
                         └──────────┬──────────┘
                                    │
-                   Creates ALL tasks in inbox/
+                   Creates task files in inbox/
                                    │
                                    ▼
                            ┌───────────────┐
@@ -81,7 +90,6 @@ agency-os/
 │   └── reports/     # Archived report files
 ├── stasis/          # Human intervention needed
 ├── prompts/         # System prompts for each agent
-├── dispatch         # CLI for creating tasks
 ├── supervisor       # Starts the supervisor agent
 └── CLAUDE.md        # Full system documentation
 ```
@@ -90,26 +98,32 @@ agency-os/
 
 | Agent | Role | Creates |
 |-------|------|---------|
-| **Supervisor** | Routes tasks, spawns agents, commits code | QA_REQUEST, BUG_FIX_REQUEST |
+| **Supervisor** | Decomposes requests, routes tasks, spawns agents, commits code | DEV_TASK, QA_REQUEST, BUG_FIX_REQUEST |
 | **Developer** | Writes code, fixes bugs | READY_FOR_QA |
 | **Tester** | Validates features, explores UI | QA_REPORT |
 | **Regression** | Runs E2E tests, self-heals test bugs | E2E_REPORT, BUG_FIX_REQUEST |
 | **Cartographer** | Documents features | SPEC_UPDATE, BUG_REPORT |
 
-## Dispatching Tasks
+## How It Works
 
-```bash
-# Document a feature (Cartographer)
-./dispatch map "Document the user dashboard"
+1. **You talk to the Supervisor** in natural language
+2. **Supervisor creates task files** in `inbox/` based on your request
+3. **Supervisor spawns the right agent** for each task
+4. **Agent executes**, creates output, returns control
+5. **Supervisor routes results** and continues until done
 
-# Test a feature (Tester)
-./dispatch qa "Verify login flow works"
+Example conversation:
+```
+You: "Fix the bug where users can submit empty forms, then verify it works"
 
-# Implement something (Developer)
-./dispatch dev "Add export button to reports"
+Supervisor creates:
+  inbox/20251210_100000_BUG_FIX_REQUEST_v1.md  (fix the bug)
+  inbox/20251210_100001_QA_REQUEST.md          (verify the fix)
 
-# Run E2E tests (Regression)
-./dispatch e2e "Run full regression suite"
+Then processes them sequentially:
+  1. Spawns Developer → fixes bug → creates READY_FOR_QA
+  2. Spawns Tester → verifies fix → creates QA_REPORT (PASS)
+  3. Commits the verified code
 ```
 
 ## File Naming Convention
@@ -174,20 +188,17 @@ The system processes **one task at a time**. No parallelism.
 ### Adapting for Your Project
 
 1. **Edit `prompts/*.md`** to match your conventions
-2. **Update `dispatch`** with your test commands
-3. **Add project learnings** to `CLAUDE.md`
+2. **Add project learnings** to `CLAUDE.md`
+3. **Create new agent types** by adding prompt files
 
 ### Adding New Agent Types
 
-1. Create `prompts/new-agent.md`
-2. Add file pattern to Supervisor routing
-3. Update `dispatch` with new command type
+1. Create `prompts/new-agent.md` with role definition
+2. Add file pattern to Supervisor routing in `prompts/supervisor.md`
 
 ## Requirements
 
-- [Claude CLI](https://claude.ai/code) - for running agents
-- Bash - for dispatch script
-- Git - for version control
+- [Claude Code](https://claude.ai/code) - for running agents
 
 ## License
 
