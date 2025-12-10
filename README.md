@@ -4,21 +4,35 @@
 
 Agency OS coordinates AI agents through the filesystem. No message queues, no databases, no complex infrastructure. Just directories as queues, file moves as locks, and naming conventions as state machines.
 
-## Why Files?
+## Project Integration
 
-Traditional coordination mechanisms (Redis, RabbitMQ, databases) solve distributed problems. But when your agents run sequentially on a single machine, they add complexity without benefit.
+Agency OS lives **inside your project** as a subdirectory:
 
-**Files give you:**
-- **Instant debugging**: `ls inbox/` shows your queue
-- **Natural persistence**: Survives crashes, state visible on restart
-- **Atomic locking**: `mv` is atomic on POSIX systems
-- **Human-readable state**: Every task is a markdown file you can read and edit
-- **Zero dependencies**: Nothing to install, configure, or maintain
+```
+my-project/
+├── src/                    # Your code
+├── tests/                  # Your tests
+├── package.json
+├── CLAUDE.md               # Project rules (agents read this)
+│
+└── agency-os/              # ← Clone here
+    ├── inbox/              # Task queue
+    ├── prompts/            # Agent definitions
+    ├── shared/             # Common protocols
+    └── ...
+```
+
+**How agents access your code:** They reference the parent directory (`../src`, `../tests`, `../package.json`). Your project's `CLAUDE.md` is read by all agents for project-specific rules.
+
+**What to customize:**
+- `shared/pre-flight.md` - Dev server port (default: 3000) and start command (`npm run dev`)
+- `prompts/*.md` - Test commands, file conventions for your stack
 
 ## Quick Start
 
 ```bash
-# Clone the repo
+# From your project root
+cd my-project
 git clone https://github.com/evoleinik/agency-os.git
 cd agency-os
 
@@ -77,6 +91,17 @@ The Supervisor decomposes your request into tasks, creates the appropriate files
               │            Cartographer              │
               └──────────────────────────────────────┘
 ```
+
+## Why Files?
+
+Traditional coordination mechanisms (Redis, RabbitMQ, databases) solve distributed problems. But when your agents run sequentially on a single machine, they add complexity without benefit.
+
+**Files give you:**
+- **Instant debugging**: `ls inbox/` shows your queue
+- **Natural persistence**: Survives crashes, state visible on restart
+- **Atomic locking**: `mv` is atomic on POSIX systems
+- **Human-readable state**: Every task is a markdown file you can read and edit
+- **Zero dependencies**: Nothing to install, configure, or maintain
 
 ## Directory Structure
 
@@ -187,9 +212,16 @@ The system processes **one task at a time**. No parallelism.
 
 ### Adapting for Your Project
 
-1. **Edit `prompts/*.md`** to match your conventions
-2. **Add project learnings** to `CLAUDE.md`
-3. **Create new agent types** by adding prompt files
+1. **`shared/pre-flight.md`** - Change dev server settings:
+   - Port (default: `3000`)
+   - Start command (default: `npm run dev`)
+
+2. **`prompts/*.md`** - Match your stack:
+   - Test runner commands
+   - Build commands
+   - File path conventions
+
+3. **Project root `CLAUDE.md`** - Add project-specific rules that all agents must follow
 
 ### Adding New Agent Types
 
